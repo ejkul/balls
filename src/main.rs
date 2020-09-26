@@ -6,6 +6,7 @@ use ggez::event;
 use ggez::graphics;
 use ggez::nalgebra as na;
 use ggez::{Context, GameResult};
+use rand::Rng;
 
 const WINDOW_WIDTH: f32 = 800.0;
 const WINDOW_HEIGHT: f32 = 600.0;
@@ -16,10 +17,12 @@ type Location = na::Vector2<f32>;
 type Shape = graphics::Mesh;
 
 #[derive(Clone)]
+#[derive(Debug)]
 struct Object {
     loc: Location,
     vel: Velocity,
     shape: Shape,
+    b_box: f32,
 }
 
 fn create_ball(
@@ -40,31 +43,25 @@ fn create_ball(
         vel,
         loc,
         shape: circle,
+        b_box: 20.0,
     };
     Ok(ball)
 }
 
-fn collision(o: &mut Object) {
-    if o.loc.y >= WINDOW_WIDTH {
+fn wall_collision(o: &mut Object) {
+    if o.loc.y >= (WINDOW_HEIGHT - o.b_box) {
         o.vel.y = o.vel.y - 1.0;
-    } 
-    if o.loc.y <= 0.0 {
+    }
+    if o.loc.y <= (0.0 + o.b_box) {
         o.vel.y = o.vel.y + 1.0;
-    } 
-    if o.loc.x >= WINDOW_WIDTH {
-        o.vel.x = o.vel.x - 1.0;
-    } 
-    if o.loc.x >= WINDOW_WIDTH {
+    }
+    if o.loc.x <= (0.0 + o.b_box) {
         o.vel.x = o.vel.x + 1.0;
-    } 
+    }
+    if o.loc.x >= (WINDOW_WIDTH - o.b_box) {
+        o.vel.x = o.vel.x - 1.0;
+    }
 }
-
-// impl Object {
-//     fn update(&mut self, vel: Velocity, loc: Location){
-//         self.vel = vel;B
-//         self.loc = loc;
-//     }
-// }
 
 struct MainState {
     objects: Vec<Object>,
@@ -72,14 +69,18 @@ struct MainState {
 
 impl MainState {
     fn new(ctx: &mut Context) -> GameResult<MainState> {
-        let ball = create_ball(
-            ctx,
-            na::Point2::origin(),
-            Location::new(0.0, 0.0),
-            Velocity::new(1.0, 1.0),
-        )?;
+        let mut rng = rand::thread_rng();
+        let mut vec : Vec<Object> = Vec::new();
+        for i in 1..10 {
+            vec.push(create_ball(
+                ctx,
+                na::Point2::origin(),
+                Location::new(rng.gen::<f32>() * WINDOW_WIDTH, rng.gen::<f32>() * WINDOW_HEIGHT),
+                Velocity::new(5.0, 5.0),
+            )?);
+        }
         let s = MainState {
-            objects: [ball].to_vec(),
+            objects: vec,
         };
         Ok(s)
     }
@@ -89,7 +90,7 @@ impl event::EventHandler for MainState {
     fn update(&mut self, _ctx: &mut Context) -> GameResult {
         // self.pos_x = self.pos_x % 800.0 + 1.0;
         for object in &mut self.objects {
-            collision(object);
+            wall_collision(object);
             object.loc = object.loc + object.vel;
         }
         Ok(())

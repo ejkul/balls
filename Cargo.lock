@@ -1190,6 +1190,7 @@ name = "nature"
 version = "0.1.0"
 dependencies = [
  "ggez",
+ "rand 0.5.6",
 ]
 
 [[package]]
@@ -1475,6 +1476,19 @@ dependencies = [
  "libc",
  "rand_core 0.3.1",
  "rdrand",
+ "winapi",
+]
+
+[[package]]
+name = "rand"
+version = "0.5.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c618c47cd3ebd209790115ab837de41425723956ad3ce2e6a7f09890947cacb9"
+dependencies = [
+ "cloudabi",
+ "fuchsia-cprng",
+ "libc",
+ "rand_core 0.3.1",
  "winapi",
 ]
 
