@@ -7,6 +7,7 @@ use ggez::graphics;
 use ggez::nalgebra as na;
 use ggez::{Context, GameResult};
 use rand::Rng;
+use ggez::event::{Axis, Button, GamepadId, KeyCode, KeyMods, MouseButton};
 
 const WINDOW_WIDTH: f32 = 800.0;
 const WINDOW_HEIGHT: f32 = 600.0;
@@ -16,13 +17,18 @@ type Velocity = na::Vector2<f32>;
 type Location = na::Vector2<f32>;
 type Shape = graphics::Mesh;
 
-#[derive(Clone)]
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 struct Object {
     loc: Location,
     vel: Velocity,
     shape: Shape,
     b_box: f32,
+}
+
+impl PartialEq for Object {
+    fn eq(&self, other: &Self) -> bool {
+        self.loc == other.loc && self.vel == other.vel
+    }
 }
 
 fn create_ball(
@@ -50,16 +56,40 @@ fn create_ball(
 
 fn wall_collision(o: &mut Object) {
     if o.loc.y >= (WINDOW_HEIGHT - o.b_box) {
-        o.vel.y = o.vel.y - 1.0;
+        o.vel.y = o.vel.y * (-1.0);
     }
     if o.loc.y <= (0.0 + o.b_box) {
-        o.vel.y = o.vel.y + 1.0;
+        o.vel.y = o.vel.y * (-1.0);
     }
     if o.loc.x <= (0.0 + o.b_box) {
-        o.vel.x = o.vel.x + 1.0;
+        o.vel.x = o.vel.x * (-1.0);
     }
     if o.loc.x >= (WINDOW_WIDTH - o.b_box) {
-        o.vel.x = o.vel.x - 1.0;
+        o.vel.x = o.vel.x * (-1.0);
+    }
+}
+
+fn object_collision(objects: &mut Vec<Object>) {
+    println!("Collision");
+    let mut indices: Vec<(usize, usize)> = Vec::new();
+    for i in 0..objects.len() {
+        for j in 0..objects.len() {
+            let o1 = &objects[i];
+            let o2 = &objects[j];
+            let distance = o1.loc - o2.loc;
+            // println!("${:?}", distance.norm());
+            if o1.loc != o2.loc && distance.norm() < o1.b_box + o2.b_box {
+                indices.push((i, j));
+            }
+        }
+    }
+    println!("${:?}", indices);
+    for (i, j) in indices {
+        let v1 = objects[i].vel - objects[j].vel;
+        let v2 = objects[j].vel - objects[i].vel;
+        objects[i].vel = v2.scale(5.0);
+        objects[j].vel = v1.scale(5.0);
+        println!("${:?}",objects[i].vel);
     }
 }
 
@@ -70,18 +100,19 @@ struct MainState {
 impl MainState {
     fn new(ctx: &mut Context) -> GameResult<MainState> {
         let mut rng = rand::thread_rng();
-        let mut vec : Vec<Object> = Vec::new();
+        let mut vec: Vec<Object> = Vec::new();
         for i in 1..10 {
             vec.push(create_ball(
                 ctx,
                 na::Point2::origin(),
-                Location::new(rng.gen::<f32>() * WINDOW_WIDTH, rng.gen::<f32>() * WINDOW_HEIGHT),
+                Location::new(
+                    rng.gen::<f32>() * WINDOW_WIDTH,
+                    rng.gen::<f32>() * WINDOW_HEIGHT,
+                ),
                 Velocity::new(5.0, 5.0),
             )?);
         }
-        let s = MainState {
-            objects: vec,
-        };
+        let s = MainState { objects: vec };
         Ok(s)
     }
 }
@@ -116,6 +147,10 @@ impl event::EventHandler for MainState {
         //     object.loc.x = x;
         //     object.loc.y = y;
         // }
+    }
+    
+    fn key_up_event(&mut self, _ctx: &mut Context, keycode: KeyCode, _keymods: KeyMods) {
+        println!("${:?}", keycode);
     }
 }
 
