@@ -7,6 +7,7 @@ use ggez::graphics;
 use ggez::nalgebra as na;
 use ggez::{Context, GameResult};
 use rand::Rng;
+use ggez::event::{Axis, Button, GamepadId, KeyCode, KeyMods, MouseButton};
 
 const WINDOW_WIDTH: f32 = 800.0;
 const WINDOW_HEIGHT: f32 = 600.0;
@@ -157,6 +158,10 @@ impl event::EventHandler for MainState {
         //     object.loc.x = x;
         //     object.loc.y = y;
         // }
+    }
+    
+    fn key_up_event(&mut self, _ctx: &mut Context, keycode: KeyCode, _keymods: KeyMods) {
+        println!("${:?}", keycode);
     }
 }
 
