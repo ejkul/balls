@@ -10,19 +10,27 @@ use rand::Rng;
 
 const WINDOW_WIDTH: f32 = 800.0;
 const WINDOW_HEIGHT: f32 = 600.0;
+const TOP_SPEED: f32 = 20.0;
 const WINDOW_CENTER: (f32, f32) = (WINDOW_WIDTH / 2.0, WINDOW_HEIGHT / 2.0);
 
 type Velocity = na::Vector2<f32>;
 type Location = na::Vector2<f32>;
+type Acceleration = na::Vector2<f32>;
 type Shape = graphics::Mesh;
 
-#[derive(Clone)]
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 struct Object {
     loc: Location,
     vel: Velocity,
+    acc: Acceleration,
     shape: Shape,
     b_box: f32,
+}
+
+impl PartialEq for Object {
+    fn eq(&self, other: &Self) -> bool {
+        self.loc == other.loc && self.vel == other.vel
+    }
 }
 
 fn create_ball(
@@ -42,6 +50,7 @@ fn create_ball(
     let ball = Object {
         vel,
         loc,
+        acc: Acceleration::new(0.0,0.0),
         shape: circle,
         b_box: 20.0,
     };
@@ -50,16 +59,45 @@ fn create_ball(
 
 fn wall_collision(o: &mut Object) {
     if o.loc.y >= (WINDOW_HEIGHT - o.b_box) {
-        o.vel.y = o.vel.y - 1.0;
+        o.vel.y = o.vel.y * (-1.0);
+        o.loc.y = WINDOW_HEIGHT - o.b_box;
     }
     if o.loc.y <= (0.0 + o.b_box) {
-        o.vel.y = o.vel.y + 1.0;
+        o.vel.y = o.vel.y * (-1.0);
+        o.loc.y = 0.0 + o.b_box;
     }
-    if o.loc.x <= (0.0 + o.b_box) {
-        o.vel.x = o.vel.x + 1.0;
+    if o.loc.x <= (0.0 + o.b_box ) {
+        o.vel.x = o.vel.x * (-1.0);
+        o.loc.x = 0.0 + o.b_box;
     }
     if o.loc.x >= (WINDOW_WIDTH - o.b_box) {
-        o.vel.x = o.vel.x - 1.0;
+        o.vel.x = o.vel.x * (-1.0);
+        o.loc.x = WINDOW_WIDTH - o.b_box;
+    }
+}
+
+fn object_collision(objects: &mut Vec<Object>) {
+    println!("Collision");
+    let mut indices: Vec<(usize, usize)> = Vec::new();
+    for i in 0..objects.len() {
+        for j in 0..objects.len() {
+            let o1 = &objects[i];
+            let o2 = &objects[j];
+            let distance = o1.loc - o2.loc;
+            // println!("${:?}", distance.norm());
+            if (i,j) != (j,i) && o1.loc != o2.loc && distance.norm() < o1.b_box + o2.b_box {
+                indices.push((i, j));
+            }
+        }
+    }
+    println!("${:?}", indices);
+    for (i, j) in indices {
+        println!("${:?}",objects[i].vel);
+        let v1 = objects[i].vel - objects[j].vel;
+        let v2 = objects[j].vel - objects[i].vel;
+        objects[i].vel = v2;
+        objects[j].vel = v1;
+        println!("${:?}",objects[i].vel);
     }
 }
 
@@ -70,18 +108,19 @@ struct MainState {
 impl MainState {
     fn new(ctx: &mut Context) -> GameResult<MainState> {
         let mut rng = rand::thread_rng();
-        let mut vec : Vec<Object> = Vec::new();
+        let mut vec: Vec<Object> = Vec::new();
         for i in 1..10 {
             vec.push(create_ball(
                 ctx,
                 na::Point2::origin(),
-                Location::new(rng.gen::<f32>() * WINDOW_WIDTH, rng.gen::<f32>() * WINDOW_HEIGHT),
+                Location::new(
+                    rng.gen::<f32>() * WINDOW_WIDTH,
+                    rng.gen::<f32>() * WINDOW_HEIGHT,
+                ),
                 Velocity::new(5.0, 5.0),
             )?);
         }
-        let s = MainState {
-            objects: vec,
-        };
+        let s = MainState { objects: vec };
         Ok(s)
     }
 }
@@ -89,9 +128,11 @@ impl MainState {
 impl event::EventHandler for MainState {
     fn update(&mut self, _ctx: &mut Context) -> GameResult {
         // self.pos_x = self.pos_x % 800.0 + 1.0;
+        // object_collision(&mut self.objects);
         for object in &mut self.objects {
             wall_collision(object);
-            object.loc = object.loc + object.vel;
+            object.vel = na::clamp(object.vel + object.acc, Velocity::new(-TOP_SPEED,-TOP_SPEED), Velocity::new(TOP_SPEED, TOP_SPEED));
+            object.loc += object.vel;
         }
         Ok(())
     }
